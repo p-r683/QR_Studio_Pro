@@ -1,10 +1,6 @@
 # 📱 QR Studio Pro
 
 <p align="center">
-  <img src="assets/logo.png" alt="QR Studio Pro" width="150"/>
-</p>
-
-<p align="center">
   <b>A modern multipurpose QR Code Generator, Scanner, and Manager built with Streamlit.</b>
 </p>
 
@@ -183,49 +179,7 @@ streamlit run app.py
 
 ---
 
-# 📸 Screenshots
 
-## Home Dashboard
-
-> Add screenshot here
-
-```
-assets/screenshots/home.png
-```
-
----
-
-## Website QR Generator
-
-```
-assets/screenshots/website.png
-```
-
----
-
-## QR Scanner
-
-```
-assets/screenshots/scanner.png
-```
-
----
-
-## History
-
-```
-assets/screenshots/history.png
-```
-
----
-
-## Analytics
-
-```
-assets/screenshots/analytics.png
-```
-
----
 
 # 📊 Database
 
@@ -281,14 +235,6 @@ git push origin feature-name
 
 5. Open a Pull Request
 
----
-
-# 📜 License
-
-This project is licensed under the MIT License.
-
----
-
 # 👨‍💻 Developer
 
 **Pranshu Verma**
@@ -297,11 +243,6 @@ B.Tech CSE (Data Science)
 
 AI | Machine Learning | Python | Streamlit
 
-GitHub:
-https://github.com/yourusername
-
-LinkedIn:
-https://linkedin.com/in/yourprofile
 
 ---
 
