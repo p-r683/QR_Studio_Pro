@@ -1,6 +1,8 @@
 # 📱 QR Studio Pro
 <p align="center">
-  <link="https://qrstudiopro-9oxbmqsiednmrtiqyhxhlb.streamlit.app/Website">
+  <a href="https://qrstudiopro-9oxbmqsiednmrtiqyhxhlb.streamlit.app/" target="_blank">
+    🌐 Live Demo
+  </a>
 </p>
 
 <p align="center">
