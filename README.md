@@ -116,10 +116,7 @@ QR-Studio-Pro/
 ├── history.db
 ├── requirements.txt
 ├── README.md
-├── LICENSE
 ├── .gitignore
-│
-├── generated/
 │
 ├── pages/
 │   ├── 1_Website.py
@@ -131,10 +128,6 @@ QR-Studio-Pro/
 │   ├── 7_Scanner.py
 │   ├── 8_History.py
 │   └── 9_Analytics.py
-│
-├── assets/
-│   ├── logo.png
-│   └── screenshots/
 │
 └── .streamlit/
     └── config.toml
