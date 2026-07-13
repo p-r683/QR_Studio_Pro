@@ -5,6 +5,7 @@ from datetime import datetime
 
 import qrcode
 from qrcode.constants import ERROR_CORRECT_H, ERROR_CORRECT_M
+from qrcode.exceptions import DataOverflowError
 from PIL import Image
 import streamlit as st
 
@@ -378,9 +379,22 @@ def build_qr_image(
         border=border,
     )
     qr.add_data(data)
-    qr.make(fit=version is None)
 
-    img = qr.make_image(fill_color=qr_color, back_color=bg_color).convert("RGB")
+    try:
+      # If version is None, automatically choose the smallest version.
+      # Otherwise, try the user-selected version.
+      qr.make(fit=(version is None))
+
+    except DataOverflowError:
+      # User selected a version that's too small.
+      # Automatically switch to Auto Version.
+      qr.version = None
+      qr.make(fit=True)
+
+    img = qr.make_image(
+      fill_color=qr_color,
+      back_color=bg_color
+    ).convert("RGB")
 
     if logo_file is not None:
         img = _embed_logo(img, logo_file)
