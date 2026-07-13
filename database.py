@@ -1,108 +1,108 @@
-"""
-QR Studio Pro — Data layer
-Opens a fresh SQLite connection per operation (safe under Streamlit's
-multi-threaded rerun model) instead of sharing one global connection/cursor.
-"""
-
 import sqlite3
-import os
+from contextlib import contextmanager
+from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "history.db")
+DB_PATH = "qr_history.db"
 
 
+@contextmanager
 def _connect():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL;")
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
-def init_db():
+def _init_db():
     with _connect() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS qr_history(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                qr_type TEXT NOT NULL,
-                data TEXT NOT NULL,
-                file_name TEXT,
-                label TEXT,
-                is_favorite INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS history (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                qr_type      TEXT NOT NULL,
+                data         TEXT NOT NULL,
+                file_name    TEXT,
+                label        TEXT,
+                created_at   TEXT NOT NULL,
+                is_favorite  INTEGER NOT NULL DEFAULT 0
             )
-        """)
-        # Lightweight migration for older DBs created before "label"/"is_favorite" existed
-        existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(qr_history)")}
-        if "label" not in existing_cols:
-            conn.execute("ALTER TABLE qr_history ADD COLUMN label TEXT")
-        if "is_favorite" not in existing_cols:
-            conn.execute("ALTER TABLE qr_history ADD COLUMN is_favorite INTEGER DEFAULT 0")
-        conn.commit()
-
-
-def add_history(qr_type, data, file_name, label=None):
-    with _connect() as conn:
-        cur = conn.execute(
-            "INSERT INTO qr_history(qr_type, data, file_name, label) VALUES (?,?,?,?)",
-            (qr_type, data, file_name, label),
+            """
         )
         conn.commit()
-        return cur.lastrowid
+
+
+_init_db()
+
+
+def add_history(qr_type: str, data: str, file_name: str, label: str = None):
+    """Insert a new history record for a generated QR code."""
+    with _connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO history (qr_type, data, file_name, label, created_at, is_favorite)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            (qr_type, data, file_name, label, datetime.now().isoformat(timespec="seconds")),
+        )
+        conn.commit()
 
 
 def get_history():
+    """Return every history record, most recent first, as a list of dicts."""
     with _connect() as conn:
-        rows = conn.execute(
-            "SELECT id, qr_type, data, file_name, label, is_favorite, created_at "
-            "FROM qr_history ORDER BY created_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM history ORDER BY created_at DESC").fetchall()
         return [dict(r) for r in rows]
 
 
-def delete_record(record_id):
+def delete_record(record_id: int):
     with _connect() as conn:
-        conn.execute("DELETE FROM qr_history WHERE id=?", (record_id,))
+        conn.execute("DELETE FROM history WHERE id = ?", (record_id,))
         conn.commit()
 
 
 def delete_all():
+    """Wipe every history record. Image files on disk are intentionally left alone."""
     with _connect() as conn:
-        conn.execute("DELETE FROM qr_history")
+        conn.execute("DELETE FROM history")
         conn.commit()
 
 
-def toggle_favorite(record_id):
+def toggle_favorite(record_id: int):
     with _connect() as conn:
+        row = conn.execute(
+            "SELECT is_favorite FROM history WHERE id = ?", (record_id,)
+        ).fetchone()
+        if row is None:
+            return
+        new_value = 0 if row["is_favorite"] else 1
         conn.execute(
-            "UPDATE qr_history SET is_favorite = 1 - is_favorite WHERE id=?",
-            (record_id,),
+            "UPDATE history SET is_favorite = ? WHERE id = ?", (new_value, record_id)
         )
         conn.commit()
 
 
 def get_stats():
-    """Aggregate stats for the Analytics dashboard and home page."""
+    """Aggregate stats used by the Analytics page."""
     with _connect() as conn:
-        total = conn.execute("SELECT COUNT(*) AS c FROM qr_history").fetchone()["c"]
-
-        by_type = conn.execute(
-            "SELECT qr_type, COUNT(*) AS c FROM qr_history GROUP BY qr_type ORDER BY c DESC"
-        ).fetchall()
-
-        by_day = conn.execute(
-            "SELECT DATE(created_at) AS day, COUNT(*) AS c FROM qr_history "
-            "GROUP BY DATE(created_at) ORDER BY day"
-        ).fetchall()
-
+        total = conn.execute("SELECT COUNT(*) AS c FROM history").fetchone()["c"]
         favorites = conn.execute(
-            "SELECT COUNT(*) AS c FROM qr_history WHERE is_favorite=1"
+            "SELECT COUNT(*) AS c FROM history WHERE is_favorite = 1"
         ).fetchone()["c"]
+        by_type = conn.execute(
+            "SELECT qr_type, COUNT(*) AS c FROM history GROUP BY qr_type ORDER BY c DESC"
+        ).fetchall()
+        by_day = conn.execute(
+            """
+            SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS c
+            FROM history GROUP BY day ORDER BY day
+            """
+        ).fetchall()
 
-        return {
-            "total": total,
-            "by_type": [dict(r) for r in by_type],
-            "by_day": [dict(r) for r in by_day],
-            "favorites": favorites,
-        }
-
-
-init_db()
+    return {
+        "total": total,
+        "favorites": favorites,
+        "by_type": [dict(r) for r in by_type],
+        "by_day": [dict(r) for r in by_day],
+    }
