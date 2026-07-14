@@ -1,9 +1,24 @@
+import base64
 import random
+from pathlib import Path
+
 import streamlit as st
+
+ASSETS_DIR = Path(__file__).parent / "assets"
+
+
+def _logo_b64(filename: str) -> str:
+    path = ASSETS_DIR / filename
+    if not path.exists():
+        return ""
+    return base64.b64encode(path.read_bytes()).decode("utf-8")
+
+
+_LOGO_ICON_B64 = _logo_b64("logo_icon.png")
 
 st.set_page_config(
     page_title="QR Studio Pro",
-    page_icon="▩",
+    page_icon=str(ASSETS_DIR / "logo_icon.png") if (ASSETS_DIR / "logo_icon.png").exists() else "▩",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -44,6 +59,23 @@ def render_qr_html(grid, cell=12, on_color="var(--accent)", off_color="transpare
     return (
         f'<div class="qr-grid" style="--cell:{cell}px;">' + "".join(rows_html) + "</div>"
     )
+
+
+# ----------------------------------------------------------------------------
+# Shared data — used by both the sidebar and the clickable card grid
+# ----------------------------------------------------------------------------
+
+CARD_LINKS = [
+    ("🌐", "Website QR", "Point straight to any URL — landing pages, portfolios or shops.", "pages/1_Website.py"),
+    ("📶", "WiFi QR", "Share network access without anyone typing a password.", "pages/2_WiFi.py"),
+    ("📧", "Email QR", "Pre-filled email drafts, ready to send in one scan.", "pages/3_Email.py"),
+    ("📞", "Phone QR", "Dial a number instantly from any camera app.", "pages/4_Phone_and_WhatsApp.py"),
+    ("💬", "WhatsApp QR", "Open a chat pre-loaded with your starting message.", "pages/4_Phone_and_WhatsApp.py"),
+    ("📷", "QR Scanner", "Decode any QR code straight from your browser.", "pages/7_Scanner.py"),
+]
+
+LIVE_FEATURES = ["Website QR", "WiFi QR", "Email QR", "Phone QR", "WhatsApp QR","Logo Embedding","QR Scanner", "History", "Analytics"]
+SOON_FEATURES = ["Gradient QR"]
 
 
 # ----------------------------------------------------------------------------
@@ -117,6 +149,49 @@ section[data-testid="stSidebar"]{
 }
 
 .hero-left{flex:1 1 380px;}
+
+.hero-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.hero-brand img{
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  object-fit:cover;
+  border:1px solid var(--border);
+}
+
+.hero-brand span{
+  font-family:'Space Grotesk', sans-serif;
+  font-weight:700;
+  font-size:18px;
+}
+
+.sidebar-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:2px 0 16px 0;
+}
+
+.sidebar-brand img{
+  width:30px;
+  height:30px;
+  border-radius:8px;
+  object-fit:cover;
+  border:1px solid var(--border);
+}
+
+.sidebar-brand span{
+  font-family:'Space Grotesk', sans-serif;
+  font-weight:600;
+  font-size:15px;
+  color:var(--text);
+}
 
 .eyebrow{
   font-family:'JetBrains Mono', monospace;
@@ -221,33 +296,41 @@ section[data-testid="stSidebar"]{
   margin:0 0 22px 0;
 }
 
-/* ---------- Feature cards ---------- */
-.qcard{
-  position:relative;
+/* ---------- Clickable QR-type cards (st.page_link inside a bordered container) ---------- */
+div[data-testid="stVerticalBlockBorderWrapper"]{
   background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px 20px 18px 20px;
-  height:100%;
+  border:1px solid var(--border) !important;
+  border-radius:16px !important;
   transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
-.qcard:hover{
+div[data-testid="stVerticalBlockBorderWrapper"]:hover{
   transform:translateY(-3px);
-  border-color:rgba(57,255,158,0.35);
+  border-color:rgba(57,255,158,0.35) !important;
   box-shadow:0 14px 34px -18px rgba(0,0,0,0.6);
 }
 
-.qcard .bar{
-  position:absolute; top:0; left:18px; right:18px; height:2px;
-  background:var(--accent-color, var(--accent));
-  border-radius:2px;
-  opacity:.85;
+[data-testid="stPageLink"]{
+  text-decoration:none !important;
 }
 
-.qcard .icon{font-size:22px; margin-bottom:10px; display:block;}
-.qcard .title{font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:16px; margin-bottom:6px;}
-.qcard .desc{color:var(--muted); font-size:13.5px; line-height:1.5;}
+[data-testid="stPageLink"] p{
+  font-family:'Space Grotesk', sans-serif !important;
+  font-weight:600 !important;
+  font-size:16px !important;
+  color:var(--text) !important;
+}
+
+[data-testid="stPageLink"]:hover p{
+  color:var(--accent) !important;
+}
+
+.qcard-desc{
+  color:var(--muted);
+  font-size:13.5px;
+  line-height:1.5;
+  margin-top:2px;
+}
 
 /* ---------- Status chips (feature availability) ---------- */
 .chip-row{display:flex; align-items:center; justify-content:space-between;
@@ -267,6 +350,33 @@ section[data-testid="stSidebar"]{
 
 .chip.live{background:rgba(57,255,158,0.12); color:var(--accent); border:1px solid rgba(57,255,158,0.3);}
 .chip.soon{background:rgba(138,147,168,0.12); color:var(--muted); border:1px solid var(--border);}
+
+/* ---------- Sidebar: hide the default page list, since the ---------- */
+/* center cards now handle navigation instead ---------- */
+[data-testid="stSidebarNav"]{display:none;}
+
+.sidebar-features-title{
+  font-family:'JetBrains Mono', monospace;
+  font-size:11.5px;
+  color:var(--accent);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin:4px 0 10px 0;
+}
+
+section[data-testid="stSidebar"] .chip-row{
+  padding:8px 10px;
+  margin-bottom:6px;
+}
+
+section[data-testid="stSidebar"] .chip-row .label{
+  font-size:12.5px;
+}
+
+section[data-testid="stSidebar"] .chip{
+  font-size:9.5px;
+  padding:3px 8px;
+}
 
 /* ---------- Buttons ---------- */
 .stButton>button{
@@ -308,12 +418,36 @@ hr, [data-testid="stDivider"]{border-color:var(--border) !important;}
 # ----------------------------------------------------------------------------
 
 with st.sidebar:
-    st.markdown(
-        '<div class="eyebrow"><span class="dot"></span>QR STUDIO PRO</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("### Navigation")
-    st.caption("v2.4.0 · Build · All systems operational")
+    if _LOGO_ICON_B64:
+        st.markdown(
+            f"""
+            <div class="sidebar-brand">
+              <img src="data:image/png;base64,{_LOGO_ICON_B64}" />
+              <span>QR Studio Pro</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="eyebrow"><span class="dot"></span>QR STUDIO PRO</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown('<div class="sidebar-features-title">🚀 Features</div>', unsafe_allow_html=True)
+
+    for f in LIVE_FEATURES:
+        st.markdown(
+            f'<div class="chip-row"><span class="label">{f}</span>'
+            f'<span class="chip live">Live</span></div>',
+            unsafe_allow_html=True,
+        )
+    for f in SOON_FEATURES:
+        st.markdown(
+            f'<div class="chip-row"><span class="label">{f}</span>'
+            f'<span class="chip soon">Soon</span></div>',
+            unsafe_allow_html=True,
+        )
 
 # ----------------------------------------------------------------------------
 # Hero
@@ -322,11 +456,17 @@ with st.sidebar:
 qr_grid = generate_qr_pattern(size=16, seed=11)
 qr_html = render_qr_html(qr_grid, cell=11)
 
+brand_html = (
+    f'<div class="hero-brand"><img src="data:image/png;base64,{_LOGO_ICON_B64}" />'
+    f'<span>QR Studio Pro</span></div>'
+    if _LOGO_ICON_B64 else ""
+)
+
 st.markdown(
     f"""
 <div class="hero-wrap">
   <div class="hero-left">
-    <div class="eyebrow"><span class="dot"></span>LIVE · GENERATING QR CODES SINCE 2024</div>
+    {brand_html}<div class="eyebrow"><span class="dot"></span>LIVE · GENERATING QR CODES SINCE 2024</div>
     <div class="hero-title">Every link,<br><span>one scan away.</span></div>
     <div class="hero-sub">
       Create, customize, and track QR codes for websites, WiFi, email, phone
@@ -360,66 +500,17 @@ st.write("")
 st.markdown('<div class="section-eyebrow">Generate</div>', unsafe_allow_html=True)
 st.markdown('<div class="section-title">Pick a QR code type</div>', unsafe_allow_html=True)
 
-cards = [
-    ("🌐", "Website QR", "Point straight to any URL — landing pages, portfolios or shops.", "var(--accent)"),
-    ("📶", "WiFi QR", "Share network access without anyone typing a password.", "var(--sky)"),
-    ("📧", "Email QR", "Pre-filled email drafts, ready to send in one scan.", "var(--amber)"),
-    ("📞", "Phone QR", "Dial a number instantly from any camera app.", "var(--violet)"),
-    ("💬", "WhatsApp QR", "Open a chat pre-loaded with your starting message.", "var(--accent)"),
-    ("📷", "QR Scanner", "Decode any QR code straight from your browser.", "var(--sky)"),
-]
-
 row1 = st.columns(3)
 row2 = st.columns(3)
-for col, (icon, title, desc, color) in zip(row1 + row2, cards):
+for col, (icon, title, desc, target) in zip(row1 + row2, CARD_LINKS):
     with col:
-        st.markdown(
-            f"""
-            <div class="qcard">
-              <div class="bar" style="--accent-color:{color}"></div>
-              <span class="icon">{icon}</span>
-              <div class="title">{title}</div>
-              <div class="desc">{desc}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        with st.container(border=True):
+            st.page_link(target, label=f"{icon}  {title}", use_container_width=True)
+            st.markdown(f'<div class="qcard-desc">{desc}</div>', unsafe_allow_html=True)
 
 st.write("")
 st.divider()
-
-# ----------------------------------------------------------------------------
-# Features status
-# ----------------------------------------------------------------------------
-
-st.markdown('<div class="section-eyebrow">Roadmap</div>', unsafe_allow_html=True)
-st.markdown('<div class="section-title">🚀 Features</div>', unsafe_allow_html=True)
-
-left, right = st.columns(2)
-
-live_features = ["Website QR", "WiFi QR", "Email QR", "Phone QR", "WhatsApp QR","Logo Embedding","QR Scanner", "History", "Analytics"]
-soon_features = ["Gradient QR"]
-
-with left:
-    st.markdown("**Available now**")
-    for f in live_features:
-        st.markdown(
-            f'<div class="chip-row"><span class="label">{f}</span>'
-            f'<span class="chip live">Live</span></div>',
-            unsafe_allow_html=True,
-        )
-
-with right:
-    st.markdown("**Coming soon**")
-    for f in soon_features:
-        st.markdown(
-            f'<div class="chip-row"><span class="label">{f}</span>'
-            f'<span class="chip soon">Soon</span></div>',
-            unsafe_allow_html=True,
-        )
-
-st.divider()
-st.success("👈 Select a page from the sidebar to begin.")
+st.success("👆 Tap a QR type above to jump straight to its generator.")
 
 st.markdown(
     """
